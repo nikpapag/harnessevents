@@ -1,5 +1,4 @@
 {
-  "IDP_2_0": "true",
   "PL_DISABLE_DELEGATE_UPGRADE_BANNER": "true",
   "HAR_ENABLED": "true",
   "PL_NO_EMAIL_FOR_SAML_ACCOUNT_INVITES": "true",
