@@ -109,11 +109,21 @@ function Set-Prefs {
 }
 
 function Save-OutputVariables {
+    # Export everything from config (existing behavior)
     foreach ($item in $script:config.psobject.Properties) {
         if (Test-Path "Env:$($item.Name)") {
             Remove-Item "Env:$($item.Name)"
         }
         New-Item -Path "Env:$($item.Name)" -Value $item.Value | Out-Null
+    }
+
+    # Explicit exports (recommended for pipeline use)
+    if ($script:config.HarnessPAT) {
+        $Env:HARNESS_PAT = $script:config.HarnessPAT
+    }
+
+    if ($script:config.HarnessAccountId) {
+        $Env:HARNESS_ACCOUNT_ID = $script:config.HarnessAccountId
     }
 }
 
