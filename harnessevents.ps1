@@ -88,8 +88,8 @@ function Get-Prefs($scriptPath) {
     $script:config = [PSCustomObject]@{}
 
     if ($scriptPath) {
-        $script:configFile = "$scriptPath.conf"
-        Send-Update -type 0 -content "Config: $script:configFile"
+        $script:configFile = "$($scriptPath).conf"
+        Send-Update -type 0 -content "Config: $($script:configFile)"
     }
 }
 
@@ -458,7 +458,7 @@ function Update-FeatureFlag {
     }
     catch {
         $errorText = $_.Exception.Message
-        Send-Update -type 2 -content "Feature flag update failed for $flag: $errorText"
+        Send-Update -type 2 -content "Feature flag update failed for ${flag}: $errorText"
         return $false
     }
 
