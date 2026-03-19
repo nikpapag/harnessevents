@@ -506,6 +506,243 @@ function Set-FeatureFlags {
     } until (-not $flagsNeeded)
 }
 
+function Add-Licenses {
+    $startDate = [System.DateTimeOffset]::new( (Get-Date) ).ToUnixTimeSeconds() * 1000
+    $expirationDate = [System.DateTimeOffset]::new( (Get-Date).AddDays(30)).ToUnixTimeSeconds() * 1000
+    # OMG Why do 2 Harness API's use DIFFERENT strings to describe the SAME ENVIRONMENT *internal sobbing*
+    $fixGodDamnEnv = $config.HarnessEnv.tolower()
+    $accountSummaryUri = "https://admin.harness.io/api/accounts/summary/$($config.HarnessAccountId)?clusterId=$fixGodDamnEnv&clusterType=PAID"
+    Send-Update -t 0 -c "checking account summary with uri: $accountSummaryUri"
+    Try {
+        $response = invoke-restmethod -Method Get -Headers $harnessAdminHeaders -uri $accountSummaryUri -ContentType "application/json"
+    }
+    catch {
+        if ($_.Exception.Response.StatusCode -eq "Forbidden") {
+            Send-update -t 2 -c "Can't reach admin.harness.io (likely VPN not enabled). Skipping license creation- this could have unexpected results."
+            return
+        }
+
+    }
+    $currentLicenses = $response.allModuleLicenses
+    $uriLicense = "https://admin.harness.io/api/accounts/$($config.HarnessAccountId)/ng/license?clusterId=$fixGodDamnEnv&clusterType=PAID"
+
+    if ($currentLicenses.CD.status -eq "EXPIRED") {
+        Send-Update -t 3 -c "CD license exists but EXPIRED. Delete or update license to be active."
+    }
+    if ($currentLicenses.CD.status -ne "ACTIVE") {
+        $bodyCDLicense = @{
+            "moduleType"            = "CD"
+            "licenseType"           = "PAID"
+            "edition"               = "ENTERPRISE"
+            "accountIdentifier"     = $($config.HarnessAccountId)
+            "startTime"             = $startDate
+            "expiryTime"            = $expirationDate
+            "status"                = "ACTIVE"
+            "premiumSupport"        = true
+            "selfService"           = true
+            "developerLicenseCount" = 100
+            "cdLicenseType"         = "DEVELOPER_360"
+        } | Convertto-Json
+        Send-Update -t 1 -c "Adding CD License"
+        invoke-restmethod -Method Put -body $bodyCDLicense -Headers $harnessAdminHeaders -uri $uriLicense -ContentType "application/json" | Out-Null
+    }
+    else { Send-Update -t 1 -c "Account already has a CD license, skipping." }
+
+    if ($currentLicenses.CI.status -eq "EXPIRED") {
+        Send-Update -t 3 -c "CI license exists but EXPIRED. Delete or update license to be active."
+    }
+    if ($currentLicenses.CI.status -ne "ACTIVE") {
+        $bodyCILicense = @{
+            "moduleType"            = "CI"
+            "licenseType"           = "PAID"
+            "edition"               = "ENTERPRISE"
+            "accountIdentifier"     = $($config.HarnessAccountId)
+            "startTime"             = $startDate
+            "expiryTime"            = $expirationDate
+            "status"                = "ACTIVE"
+            "premiumSupport"        = true
+            "selfService"           = true
+            "developerLicenseCount" = 100
+        } | Convertto-Json
+        Send-Update -t 1 -c "Adding CI License"
+        invoke-restmethod -Method Put -body $bodyCILicense -Headers $harnessAdminHeaders -uri $uriLicense -ContentType "application/json" | Out-Null
+    }
+    else { Send-Update -t 1 -c "Account already has a CI license, skipping." }
+
+    if ($currentLicenses.IACM.status -eq "EXPIRED") {
+        Send-Update -t 3 -c "IACM license exists but EXPIRED. Delete or update license to be active."
+    }
+    if ($currentLicenses.IACM.status -ne "ACTIVE") {
+        $bodyIACMLicense = @{
+            "moduleType"            = "IACM"
+            "licenseType"           = "PAID"
+            "edition"               = "ENTERPRISE"
+            "accountIdentifier"     = $($config.HarnessAccountId)
+            "startTime"             = $startDate
+            "expiryTime"            = $expirationDate
+            "status"                = "ACTIVE"
+            "premiumSupport"        = true
+            "selfService"           = true
+            "developerLicenseCount" = 100
+        } | Convertto-Json
+        Send-Update -t 1 -c "Adding IACM License"
+        invoke-restmethod -Method Put -body $bodyIACMLicense -Headers $harnessAdminHeaders -uri $uriLicense -ContentType "application/json" | Out-Null
+    }
+    else { Send-Update -t 1 -c "Account already has an IACM license, skipping." }
+
+    if ($currentLicenses.CHAOS.status -eq "EXPIRED") {
+        Send-Update -t 3 -c "CHAOS license exists but EXPIRED. Delete or update license to be active."
+    }
+    if ($currentLicenses.CHAOS.status -ne "ACTIVE") {
+        $bodyCHAOSLicense = @{
+            "moduleType"            = "CHAOS"
+            "licenseType"           = "PAID"
+            "edition"               = "ENTERPRISE"
+            "accountIdentifier"     = $($config.HarnessAccountId)
+            "startTime"             = $startDate
+            "expiryTime"            = $expirationDate
+            "status"                = "ACTIVE"
+            "premiumSupport"        = true
+            "selfService"           = true
+            "developerLicenseCount" = 100
+            "chaosLicenseType"      = "DEVELOPER_360"
+            "secondaryEntitlement"  = 33
+        } | Convertto-Json
+        Send-Update -t 1 -c "Adding CHAOS License"
+        invoke-restmethod -Method Put -body $bodyCHAOSLicense -Headers $harnessAdminHeaders -uri $uriLicense -ContentType "application/json" | Out-Null
+    }
+    else { Send-Update -t 1 -c "Account already has a CHAOS license, skipping." }
+
+    if ($currentLicenses.IDP.status -eq "EXPIRED") {
+        Send-Update -t 3 -c "IDP license exists but EXPIRED. Delete or update license to be active."
+    }
+    if ($currentLicenses.IDP.status -ne "ACTIVE") {
+        $bodyIDPLicense = @{
+            "moduleType"            = "IDP"
+            "licenseType"           = "PAID"
+            "edition"               = "ENTERPRISE"
+            "accountIdentifier"     = $($config.HarnessAccountId)
+            "startTime"             = $startDate
+            "expiryTime"            = $expirationDate
+            "status"                = "ACTIVE"
+            "premiumSupport"        = true
+            "selfService"           = true
+            "developerLicenseCount" = 100
+        } | Convertto-Json
+        Send-Update -t 1 -c "Adding IDP License"
+        invoke-restmethod -Method Put -body $bodyIDPLicense -Headers $harnessAdminHeaders -uri $uriLicense -ContentType "application/json" | Out-Null
+    }
+    else { Send-Update -t 1 -c "Account already has a IDP license, skipping." }
+
+    if ($currentLicenses.STO.status -eq "EXPIRED") {
+        Send-Update -t 3 -c "STO license exists but EXPIRED. Delete or update license to be active."
+    }
+    if ($currentLicenses.STO.status -ne "ACTIVE") {
+        $bodySTOLicense = @{
+            "moduleType"            = "STO"
+            "licenseType"           = "PAID"
+            "edition"               = "ENTERPRISE"
+            "accountIdentifier"     = $($config.HarnessAccountId)
+            "startTime"             = $startDate
+            "expiryTime"            = $expirationDate
+            "status"                = "ACTIVE"
+            "premiumSupport"        = true
+            "selfService"           = true
+            "developerLicenseCount" = 100
+        } | Convertto-Json
+        Send-Update -t 1 -c "Adding STO License"
+        invoke-restmethod -Method Put -body $bodySTOLicense -Headers $harnessAdminHeaders -uri $uriLicense -ContentType "application/json" | Out-Null
+    }
+    else { Send-Update -t 1 -c "Account already has a STO license, skipping." }
+
+    if ($currentLicenses.SSCA.status -eq "EXPIRED") {
+        Send-Update -t 3 -c "SSCA license exists but EXPIRED. Delete or update license to be active."
+    }
+    if ($currentLicenses.SSCA.status -ne "ACTIVE") {
+        $bodySSCALicense = @{
+            "moduleType"            = "SSCA"
+            "licenseType"           = "PAID"
+            "edition"               = "ENTERPRISE"
+            "accountIdentifier"     = $($config.HarnessAccountId)
+            "startTime"             = $startDate
+            "expiryTime"            = $expirationDate
+            "status"                = "ACTIVE"
+            "premiumSupport"        = true
+            "selfService"           = true
+            "developerLicenseCount" = 100
+            "numberOfExecutions"    = 10000
+        } | Convertto-Json
+        Send-Update -t 1 -c "Adding SSCA License"
+        invoke-restmethod -Method Put -body $bodySSCALicense -Headers $harnessAdminHeaders -uri $uriLicense -ContentType "application/json" | Out-Null
+    }
+    else { Send-Update -t 1 -c "Account already has a SSCA license, skipping." }
+
+    if ($currentLicenses.HAR.status -eq "EXPIRED") {
+        Send-Update -t 3 -c "HAR license exists but EXPIRED. Delete or update license to be active."
+    }
+    if ($currentLicenses.HAR.status -ne "ACTIVE") {
+        $bodyHARLicense = @{
+            "moduleType"             = "HAR"
+            "licenseType"            = "PAID"
+            "edition"                = "ENTERPRISE"
+            "accountIdentifier"      = $($config.HarnessAccountId)
+            "startTime"              = $startDate
+            "expiryTime"             = $expirationDate
+            "status"                 = "ACTIVE"
+            "premiumSupport"         = true
+            "selfService"            = true
+            "maxStorageSizeInString" = "1GiB"
+        } | Convertto-Json
+        Send-Update -t 1 -c "Adding HAR License"
+        invoke-restmethod -Method Put -body $bodyHARLicense -Headers $harnessAdminHeaders -uri $uriLicense -ContentType "application/json" | Out-Null
+    }
+    else { Send-Update -t 1 -c "Account already has a HAR license, skipping." }
+
+    if ($currentLicenses.DBOPS.status -eq "EXPIRED") {
+        Send-Update -t 3 -c "DBOPS license exists but EXPIRED. Delete or update license to be active."
+    }
+    if ($currentLicenses.DBOPS.status -ne "ACTIVE") {
+        $bodyDBOPSLicense = @{
+            "moduleType"        = "DBOPS"
+            "licenseType"       = "PAID"
+            "edition"           = "ENTERPRISE"
+            "accountIdentifier" = $($config.HarnessAccountId)
+            "startTime"         = $startDate
+            "expiryTime"        = $expirationDate
+            "status"            = "ACTIVE"
+            "premiumSupport"    = true
+            "selfService"       = true
+            "instanceCount"     = 100
+        } | Convertto-Json
+        Send-Update -t 1 -c "Adding DBOPS License"
+        invoke-restmethod -Method Put -body $bodyDBOPSLicense -Headers $harnessAdminHeaders -uri $uriLicense -ContentType "application/json" | Out-Null
+    }
+    else { Send-Update -t 1 -c "Account already has a DBOPS license, skipping." }
+
+    if ($currentLicenses.FME.status -eq "EXPIRED") {
+        Send-Update -t 3 -c "FME license exists but EXPIRED. Delete or update license to be active."
+    }
+    if ($currentLicenses.FME.status -ne "ACTIVE") {
+        $bodyDBOPSLicense = @{
+            "moduleType"             = "FME"
+            "licenseType"            = "PAID"
+            "edition"                = "ENTERPRISE"
+            "accountIdentifier"      = $($config.HarnessAccountId)
+            "startTime"              = $startDate
+            "expiryTime"             = $expirationDate
+            "status"                 = "ACTIVE"
+            "premiumSupport"         = true
+            "selfService"            = true
+            "numberOfDevelopers"     = 100
+            "numberOfEventsEntitled" = 1000000
+            "numberOfMTKsEntitled"   = 1000000
+        } | Convertto-Json
+        Send-Update -t 1 -c "Adding FME License"
+        invoke-restmethod -Method Put -body $bodyDBOPSLicense -Headers $harnessAdminHeaders -uri $uriLicense -ContentType "application/json" | Out-Null
+    }
+    else { Send-Update -t 1 -c "Account already has a FME license, skipping." }
+}
+
 function Invoke-Create {
     $ErrorActionPreference = "Stop"
 
@@ -518,6 +755,7 @@ function Invoke-Create {
     Add-Account -accountName $newAccount
     Create-HarnessPAT
     Test-Connectivity -harnessToken $script:config.HarnessPAT | Out-Null
+    Add-Licenses
     Get-HarnessFFToken
     Set-FeatureFlags
     Save-OutputVariables
@@ -537,3 +775,5 @@ switch ($action) {
     "create" { Invoke-Create }
     default  { Get-Help }
 }
+
+
